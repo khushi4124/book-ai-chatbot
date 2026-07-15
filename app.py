@@ -86,72 +86,29 @@ if not os.environ.get("GROQ_API_KEY") or not os.environ.get("PINECONE_API_KEY"):
     st.error("Missing API Keys! Please ensure GROQ_API_KEY and PINECONE_API_KEY are set.")
 
 with st.sidebar:
-    st.header("📚 About this App")
-    st.markdown("This AI assistant is pre-configured and ready to use! Just type your question below.")
+    st.header("📚 Welcome to the Library")
+    st.markdown("This AI assistant is pre-configured and ready to use! Just type your question in the chat.")
     
     st.markdown("---")
-    st.header("➕ Add a New Book")
-    st.markdown("Want to chat with a different book? Search for it below (e.g., 'Frankenstein', 'Dracula').")
+    st.header("📜 Available Tomes")
+    st.markdown("The following texts are currently bound within our Pinecone archives:")
     
-    new_book_title = st.text_input("Book Title:")
+    books = [
+        "Pride and Prejudice",
+        "Frankenstein",
+        "Little Women",
+        "Crime and Punishment",
+        "The Mahabharata",
+        "Bhagavad Gita",
+        "Sense and Sensibility",
+        "The Yoga-Vasishtha Maharamayana"
+    ]
     
-    if st.button("Download & Add to Library"):
-        if new_book_title:
-            with st.spinner(f"Searching Gutenberg for '{new_book_title}'..."):
-                try:
-                    search_url = f"https://gutendex.com/books/?search={new_book_title.replace(' ', '%20')}"
-                    response = requests.get(search_url).json()
-                    
-                    if response['count'] == 0:
-                        st.error("Book not found in the Gutenberg library.")
-                    else:
-                        book_data = response['results'][0]
-                        actual_title = book_data['title']
-                        formats = book_data['formats']
-                        
-                        text_url = None
-                        for key, url in formats.items():
-                            if 'text/plain' in key:
-                                text_url = url
-                                break
-                                
-                        if not text_url:
-                            st.error(f"Sorry, a plain text version of '{actual_title}' is not available.")
-                        else:
-                            st.info(f"Found '{actual_title}'. Downloading...")
-                            text_response = requests.get(text_url)
-                            safe_title = re.sub(r'[^A-Za-z0-9]', '_', actual_title)
-                            file_path = f"temp_{safe_title}.txt"
-                            
-                            with open(file_path, "w", encoding="utf-8") as file:
-                                file.write(text_response.text)
-                                
-                            st.info("Reading and chunking chapters...")
-                            loader = TextLoader(file_path, encoding="utf-8")
-                            documents = loader.load()
-                            
-                            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-                            chunks = text_splitter.split_documents(documents)
-                            
-                            for chunk in chunks:
-                                chunk.metadata = {"book_title": actual_title}
-                                
-                            st.info("Saving to Pinecone Cloud...")
-                            embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-                            
-                            PineconeVectorStore.from_documents(
-                                documents=chunks, 
-                                embedding=embedding_model, 
-                                index_name="enchanted-library"
-                            )
-                            
-                            os.remove(file_path)
-                            st.cache_resource.clear() 
-                            st.success(f"Successfully added '{actual_title}'! You can now chat with it.")
-                except Exception as e:
-                    st.error(f"An error occurred: {e}")
-        else:
-            st.warning("Please type a book title first!")
+    for book in books:
+        st.markdown(f"- ✨ *{book}*")
+        
+    st.markdown("---")
+    st.info("💡 **Developer Note:** The data ingestion pipeline is handled securely off-server to ensure lightning-fast inference.")
 
 @st.cache_resource
 def load_database():
