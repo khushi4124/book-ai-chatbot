@@ -80,14 +80,8 @@ st.markdown(fairytale_css, unsafe_allow_html=True)
 st.title("✨ The Enchanted Library ✨")
 st.write("Ask any question about the characters or plot of your chosen tale.")
 
-try:
-    if "GROQ_API_KEY" not in os.environ:
-        os.environ["GROQ_API_KEY"] = st.secrets.get("GROQ_API_KEY", "")
-    if "PINECONE_API_KEY" not in os.environ:
-        os.environ["PINECONE_API_KEY"] = st.secrets.get("PINECONE_API_KEY", "")
-except FileNotFoundError:
-    pass
-
+if not os.environ.get("GROQ_API_KEY") or not os.environ.get("PINECONE_API_KEY"):
+    st.error("Missing API Keys! Please ensure they are set in the Render dashboard.")
 if not os.environ.get("GROQ_API_KEY") or not os.environ.get("PINECONE_API_KEY"):
     st.error("Missing API Keys! Please ensure GROQ_API_KEY and PINECONE_API_KEY are set.")
 
