@@ -3,7 +3,7 @@ import os
 import requests
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEndpointEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
@@ -81,7 +81,7 @@ st.title("✨ The Enchanted Library ✨")
 st.write("Ask any question about the characters or plot of your chosen tale.")
 
 if not os.environ.get("GROQ_API_KEY") or not os.environ.get("PINECONE_API_KEY"):
-    st.error("Missing API Keys! Please ensure they are set in the Render dashboard.")
+    st.error("Missing API Keys! Please ensure GROQ_API_KEY and PINECONE_API_KEY are set in the Render dashboard.")
     
 with st.sidebar:
     st.header("📚 Welcome to the Library")
@@ -110,12 +110,8 @@ with st.sidebar:
 
 @st.cache_resource
 def load_database():
-    if not os.environ.get("HF_TOKEN"):
-        st.error("Missing HF_TOKEN in Render environment variables!")
-        
-    embedding_model = HuggingFaceEndpointEmbeddings(
-        model="sentence-transformers/all-MiniLM-L6-v2",
-        huggingfacehub_api_token=os.environ.get("HF_TOKEN")
+    embedding_model = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
     vector_db = PineconeVectorStore(
