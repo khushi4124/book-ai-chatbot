@@ -37,12 +37,13 @@ The standalone question is embedded and used to retrieve the top 8 most relevant
 The retrieved chunks + conversation history + question are passed to a Groq-hosted LLM (llama-3.1-8b-instant) to generate the final answer
 An expander below the answer shows what the AI retrieved and how it interpreted the question, for transparency
 
-**Tech Stack**
+## Tech Stack
 
-**Purpose **                      **Tool **                               
-UI                                Streamlit
-Orchestration                     LangChain
-Vector database                   Pinecone
-LLM inference                     Groq (llama-3.1-8b-instant)
-Embeddings                        fastembed (local, ONNX runtime) running sentence-transformers/all-MiniLM-L6-v2
-Hosting                           Render
+| Purpose | Tool |
+|---|---|
+| UI | Streamlit |
+| Orchestration | LangChain |
+| Vector database | Pinecone |
+| LLM inference | Groq (`llama-3.1-8b-instant`) |
+| Embeddings | `fastembed` (local, ONNX runtime) running `sentence-transformers/all-MiniLM-L6-v2` |
+| Hosting | Render |
