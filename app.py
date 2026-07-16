@@ -82,9 +82,7 @@ st.write("Ask any question about the characters or plot of your chosen tale.")
 
 if not os.environ.get("GROQ_API_KEY") or not os.environ.get("PINECONE_API_KEY"):
     st.error("Missing API Keys! Please ensure they are set in the Render dashboard.")
-if not os.environ.get("GROQ_API_KEY") or not os.environ.get("PINECONE_API_KEY"):
-    st.error("Missing API Keys! Please ensure GROQ_API_KEY and PINECONE_API_KEY are set.")
-
+    
 with st.sidebar:
     st.header("📚 Welcome to the Library")
     st.markdown("This AI assistant is pre-configured and ready to use! Just type your question in the chat.")
@@ -119,12 +117,6 @@ def load_database():
         model="sentence-transformers/all-MiniLM-L6-v2",
         huggingfacehub_api_token=os.environ.get("HF_TOKEN")
     )
-
-    vector_db = PineconeVectorStore(
-        index_name="enchanted-library", 
-        embedding=embedding_model
-    )
-    return vector_db.as_retriever(search_kwargs={"k": 8})
 
     vector_db = PineconeVectorStore(
         index_name="enchanted-library", 
