@@ -3,7 +3,7 @@ import os
 import requests
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.embeddings import Embeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
@@ -80,8 +80,8 @@ st.markdown(fairytale_css, unsafe_allow_html=True)
 st.title("✨ The Enchanted Library ✨")
 st.write("Ask any question about the characters or plot of your chosen tale.")
 
-if not os.environ.get("GROQ_API_KEY") or not os.environ.get("PINECONE_API_KEY"):
-    st.error("Missing API Keys! Please ensure GROQ_API_KEY and PINECONE_API_KEY are set in the Render dashboard.")
+if not os.environ.get("GROQ_API_KEY") or not os.environ.get("PINECONE_API_KEY") or not os.environ.get("HF_TOKEN"):
+    st.error("Missing API Keys! Please ensure GROQ_API_KEY, PINECONE_API_KEY, and HF_TOKEN are set in the Render dashboard.")
     
 with st.sidebar:
     st.header("📚 Welcome to the Library")
@@ -108,10 +108,35 @@ with st.sidebar:
     st.markdown("---")
     st.info("💡 **Developer Note:** The data ingestion pipeline is handled securely off-server to ensure lightning-fast inference.")
 
+class HFRouterEmbeddings(Embeddings):
+    """Lightweight embeddings wrapper that calls HF's current Inference Providers
+    router endpoint directly via plain HTTP, instead of loading the model
+    locally. Keeps memory footprint small enough for free-tier hosting."""
+
+    def __init__(self, model_name: str, api_key: str):
+        self.api_url = f"https://router.huggingface.co/hf-inference/models/{model_name}/pipeline/feature-extraction"
+        self.headers = {"Authorization": f"Bearer {api_key}"}
+
+    def _embed(self, texts):
+        response = requests.post(self.api_url, headers=self.headers, json={"inputs": texts})
+        response.raise_for_status()
+        return response.json()
+
+    def embed_documents(self, texts):
+        return self._embed(texts)
+
+    def embed_query(self, text):
+        return self._embed([text])[0]
+
+
 @st.cache_resource
 def load_database():
-    embedding_model = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    if not os.environ.get("HF_TOKEN"):
+        st.error("Missing HF_TOKEN in Render environment variables!")
+
+    embedding_model = HFRouterEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        api_key=os.environ.get("HF_TOKEN")
     )
 
     vector_db = PineconeVectorStore(
