@@ -3,7 +3,7 @@ import os
 import requests
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
@@ -112,7 +112,19 @@ with st.sidebar:
 
 @st.cache_resource
 def load_database():
-    embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    if not os.environ.get("HF_TOKEN"):
+        st.error("Missing HF_TOKEN in Render environment variables!")
+        
+    embedding_model = HuggingFaceEndpointEmbeddings(
+        model="sentence-transformers/all-MiniLM-L6-v2",
+        huggingfacehub_api_token=os.environ.get("HF_TOKEN")
+    )
+
+    vector_db = PineconeVectorStore(
+        index_name="enchanted-library", 
+        embedding=embedding_model
+    )
+    return vector_db.as_retriever(search_kwargs={"k": 8})
 
     vector_db = PineconeVectorStore(
         index_name="enchanted-library", 
