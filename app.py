@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import time
 import requests
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -111,16 +112,38 @@ with st.sidebar:
 class HFRouterEmbeddings(Embeddings):
     """Lightweight embeddings wrapper that calls HF's current Inference Providers
     router endpoint directly via plain HTTP, instead of loading the model
-    locally. Keeps memory footprint small enough for free-tier hosting."""
+    locally. Keeps memory footprint small enough for free-tier hosting.
+    Includes retry logic since HF's serverless backend can be slow to
+    'wake up' a model on the first request (cold start)."""
 
     def __init__(self, model_name: str, api_key: str):
         self.api_url = f"https://router.huggingface.co/hf-inference/models/{model_name}/pipeline/feature-extraction"
-        self.headers = {"Authorization": f"Bearer {api_key}"}
+        self.headers = {
+            "Authorization": f"Bearer {api_key}",
+            "X-Wait-For-Model": "true"
+        }
 
-    def _embed(self, texts):
-        response = requests.post(self.api_url, headers=self.headers, json={"inputs": texts})
-        response.raise_for_status()
-        return response.json()
+    def _embed(self, texts, max_retries=4):
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(
+                    self.api_url,
+                    headers=self.headers,
+                    json={"inputs": texts},
+                    timeout=60
+                )
+                if response.status_code in (503, 504):
+                    # Model is cold-starting or the gateway timed out waiting; retry.
+                    last_error = f"{response.status_code}: {response.text[:200]}"
+                    time.sleep(5 * (attempt + 1))
+                    continue
+                response.raise_for_status()
+                return response.json()
+            except requests.exceptions.Timeout:
+                last_error = "Request timed out"
+                time.sleep(5 * (attempt + 1))
+        raise RuntimeError(f"HF embedding API did not respond after {max_retries} attempts. Last error: {last_error}")
 
     def embed_documents(self, texts):
         return self._embed(texts)
